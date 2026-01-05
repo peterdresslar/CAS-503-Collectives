@@ -8,10 +8,15 @@
 
 from pathlib import Path # to handle file paths across all operating systems
 
+#portability
+BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_ORIGINAL = BASE_DIR / 'index.html'
+DEFAULT_MODIFIED = BASE_DIR / 'index-modified.html'
+
 def setupBoidsSimulation(attractiveFactor,alignmentFactor,avoidFactor,
     visualRange=75,numBoids=100,drawTrail=False,
-    originalFilename=Path('./boids/index.html'),
-    modifiedFilename=Path('./boids/index-modified.html')):
+    originalFilename=DEFAULT_ORIGINAL,
+    modifiedFilename=DEFAULT_MODIFIED):
     """
     Write a modified boids simulation HTML file with parameters set
     according to input arguments.
@@ -21,9 +26,8 @@ def setupBoidsSimulation(attractiveFactor,alignmentFactor,avoidFactor,
     """
     
     # read original HTML simulation file
-    fin = open(originalFilename,'r')
-    originalHTML = fin.read()
-    fin.close()
+    with open(originalFilename,'r') as fin:
+        originalHTML = fin.read()
     
     # change units of parameters such that 1 corresponds to the default value
     attractiveFactorDefault = 0.005
@@ -48,7 +52,5 @@ def setupBoidsSimulation(attractiveFactor,alignmentFactor,avoidFactor,
         'const DRAW_TRAIL = false;',
         'const DRAW_TRAIL = {};'.format(str(drawTrail).lower()))
 
-    fout = open(modifiedFilename,'w')
-    fout.write(modifiedHTML)
-    fout.close()
-    
+    with open(modifiedFilename,'w') as fout:
+        fout.write(modifiedHTML)
