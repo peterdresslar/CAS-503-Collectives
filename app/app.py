@@ -3,49 +3,78 @@ import streamlit.components.v1 as components
 import pathlib
 
 component_dir = pathlib.Path(__file__).parent / "canvas_component"
-
-# declare the component using the streamlit component API
 _component_func = components.declare_component("my_canvas", path=str(component_dir))
 
-# wrapper function to render the component
-def render_canvas(drawing_color="black", clear_flag=False, key=None):
-    """
-    Renders the component and returns the value sent from JavaScript.
-    
-    Args:
-        drawing_color: A signal to send to JS.
-        clear_flag: Another signal to send to JS.
-        key: Unique Streamlit key to prevent re-renders loops.
-    """
-    component_value = _component_func(
-        drawing_color=drawing_color,
-        clear_flag=clear_flag,
-        key=key,
-        default={} # Default return value before JS sends anything
-    )
-    return component_value
+st.set_page_config(page_title="Boids Simulator", page_icon="bird", layout="wide")
 
-# 3. The Streamlit App Logic
-st.title("Bi-Directional Canvas Component")
+# wrapper function to render the component
+def render_canvas(params=None, command=None, key=None, height=500):
+    return _component_func(
+        params=params or {},
+        command=command,
+        key=key,
+        default={},
+        height=height
+    )
+
+# -------------------------
+# command helpers (one-shot)
+# -------------------------
+def _set_command(cmd: str):
+    st.session_state["boids_command"] = cmd
+
+def start():
+    _set_command("start")
+
+def stop():
+    _set_command("stop")
+
+def reload():
+    _set_command("reload")
+
+# -------------------------
+# Streamlit app
+# -------------------------
+st.title("Boids Simulator")
+
+# init command state
+if "boids_command" not in st.session_state:
+    st.session_state["boids_command"] = None
 
 with st.sidebar:
-    st.header("Controls (Python -> JS)")
-    # Signal 1: Color Picker
-    color = st.color_picker("Pick a color", "#FF0000")
-    # Signal 2: Clear Button
-    clear = st.button("Clear Canvas")
+    st.header("Sim controls")
+
+    # These slider values should match whatever units you want in JS.
+    attractive = st.slider("Attractive Factor", 0.0, 10.0, 2.0)
+    alignment = st.slider("Alignment Factor", 0.0, 10.0, 1.0)
+    avoid = st.slider("Avoid Factor", 0.0, 10.0, 1.0)
+    num_boids = st.slider("Number of Boids", 10, 500, 100)
+    visual_range = st.slider("Visual Range", 10, 200, 75)
+    draw_trail = st.checkbox("Draw Trail", value=False)
+
+    st.button("Start", on_click=start, use_container_width=True)
+    st.button("Stop", on_click=stop, use_container_width=True)
+    st.button("Reload", on_click=reload, use_container_width=True)
+
+# always send params; command is one-shot
+params = {
+    "attractiveFactor": attractive,
+    "alignmentFactor": alignment,
+    "avoidFactor": avoid,
+    "numBoids": num_boids,
+    "visualRange": visual_range,
+    "drawTrail": draw_trail,
+}
+
+command = st.session_state["boids_command"]
+telemetry = render_canvas(params=params, command=command, key="boids", height=500)
+
+# consume the command so it doesn't repeat on next rerun
+st.session_state["boids_command"] = None
 
 with st.container(border=True):
-    st.header("Simulator")
-    # Render the component and capture telemetry
-    # Note: Streamlit re-runs the script whenever the component sends data back.
-    telemetry = render_canvas(drawing_color=color, clear_flag=clear)
-    
+    st.header("Telemetry (JS → Python)")
     if telemetry:
-        st.write("Received from JS:")
         st.json(telemetry)
     else:
-        st.info("Click on the canvas to send data.")
-
-# Note on "Clear": The clear button is stateless. In a real app, you might want
-# to use st.session_state to manage the clear flag so it resets after one frame.
+        st.info("No telemetry yet.")

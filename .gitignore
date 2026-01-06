@@ -7,3 +7,6 @@ __pycache__/
 
 # virtual environment
 venv/
+
+# dont commit updates to the boids/index-modified.html file
+boids/index-modified.html
