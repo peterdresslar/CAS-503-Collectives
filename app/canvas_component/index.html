@@ -9,6 +9,7 @@
     }
     canvas {
       display: block;
+      box-sizing: border-box;
       width: 99%;   /* fill iframe width minus the percent for the border */
       height: 500px;   /* fill iframe height */
       border: 1px solid #d3d3d3;
@@ -30,6 +31,8 @@
     function setFrameHeight(height) { sendMessageToStreamlitClient("streamlit:setFrameHeight", { height: height }); }
     function sendDataToPython(data) { sendMessageToStreamlitClient("streamlit:setComponentValue", { value: data }); }
 
+    const FRAME_HEIGHT = 500;
+
     function resizeCanvasToCSSSize() {
       const canvas = document.getElementById("boids");
       const rect = canvas.getBoundingClientRect();
@@ -42,21 +45,28 @@
       // if your boids code uses ctx pixels directly, you may also want:
       const ctx = canvas.getContext("2d");
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-      // tell Streamlit iframe to fit content height
-      setFrameHeight(Math.ceil(rect.height));
     }
 
     window.addEventListener("load", function () {
       init();
 
-      resizeCanvasToCSSSize();
+      // Important: assert a non-zero iframe height up-front (avoids Chrome 0px feedback loop)
+      setFrameHeight(FRAME_HEIGHT);
 
-      window.BOIDS.init({ canvasId: "boids", sendTelemetry: sendDataToPython });
+      // Let layout settle, then size canvas + init sim
+      requestAnimationFrame(() => {
+        resizeCanvasToCSSSize();
+        if (window.BOIDS) {
+          window.BOIDS.init({ canvasId: "boids", sendTelemetry: sendDataToPython });
+        }
+      });
+    });
 
-      window.addEventListener("resize", () => {
-        window.BOIDS.resize();
-        window.BOIDS.reload();
+    window.addEventListener("resize", () => {
+      setFrameHeight(FRAME_HEIGHT);
+      requestAnimationFrame(() => {
+        resizeCanvasToCSSSize();
+        if (window.BOIDS) window.BOIDS.resize();
       });
     });
 
@@ -69,6 +79,9 @@
       if (args.command === "start") window.BOIDS.start();
       if (args.command === "stop") window.BOIDS.stop();
       if (args.command === "reload") window.BOIDS.reload();
+
+      // Keep height asserted after Streamlit renders
+      setFrameHeight(FRAME_HEIGHT);
     });
   </script>
 </body>
