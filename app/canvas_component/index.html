@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <canvas id="myCanvas" width="600" height="400" style="border:1px solid #d3d3d3;"></canvas>
+
+    <script>
+        
+        // ----------------------------------------------------------------------
+        // shim for streamlit communication: would be nice to move this to a separate file at some point
+        // ----------------------------------------------------------------------
+
+        function sendMessageToStreamlitClient(type, data) {
+            var outData = Object.assign({
+                isStreamlitMessage: true,
+                type: type,
+            }, data);
+            window.parent.postMessage(outData, "*");
+        }
+
+        function init() {
+            sendMessageToStreamlitClient("streamlit:componentReady", {apiVersion: 1});
+        }
+
+        function setFrameHeight(height) {
+            sendMessageToStreamlitClient("streamlit:setFrameHeight", {height: height});
+        }
+
+        // The `data` argument can be any JSON-serializable value.
+        function sendDataToPython(data) {
+            sendMessageToStreamlitClient("streamlit:setComponentValue", {value: data});
+        }
+
+        // ----------------------------------------------------
+        // boids javascript code
+        // ----------------------------------------------------
+        
+        var canvas = document.getElementById("myCanvas");
+        var ctx = canvas.getContext("2d");
+
+        // We receive data from Python via this event listener
+        window.addEventListener("message", function(event) {
+            if (event.data.type !== "streamlit:render") return;
+            
+            // "args" contains the dictionary you send from Python
+            const args = event.data.args; 
+            
+            // Example: Using a signal from Python to change color
+            const color = args.drawing_color || "black";
+            const clear = args.clear_flag;
+
+            if (clear) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            // Let's draw something simple as a test
+            ctx.fillStyle = color;
+            ctx.fillRect(10, 10, 50, 50); // Draw a box just to show it works
+        });
+
+        // Example: Sending Telemetry back to Python on click
+        canvas.addEventListener("mousedown", function(event) {
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            // Draw a circle where user clicked
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // telemetry
+            sendDataToPython({
+                x: x,
+                y: y,
+                message: "User clicked the canvas!"
+            });
+        });
+
+        window.addEventListener("load", function() {
+            init();
+            setFrameHeight(450);
+        });
+
+    </script>
+</body>
+</html>
+
+
