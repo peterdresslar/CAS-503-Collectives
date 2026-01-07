@@ -32,8 +32,7 @@
   }
 
   function sizeCanvasToElement() {
-    // Use element size instead of window.innerWidth/Height
-    // (better inside Streamlit iframe)
+    // updated for streamlit iframe
     width = canvas.width;
     height = canvas.height;
   }
