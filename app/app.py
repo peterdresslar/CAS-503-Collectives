@@ -42,14 +42,13 @@ if "boids_command" not in st.session_state:
     st.session_state["boids_command"] = None
 
 with st.sidebar:
-    st.header("Sim controls")
-
     # These slider values should match whatever units you want in JS.
-    attractive = st.slider("Attractive Factor", 0.0, 10.0, 2.0)
-    alignment = st.slider("Alignment Factor", 0.0, 10.0, 1.0)
-    avoid = st.slider("Avoid Factor", 0.0, 10.0, 1.0)
-    num_boids = st.slider("Number of Boids", 10, 500, 100)
-    visual_range = st.slider("Visual Range", 10, 200, 75)
+    attractive = st.slider("Attractive Factor", 0.0, 10.0, value=2.0, step=0.1)
+    alignment = st.slider("Alignment Factor", 0.0, 10.0, value=1.0, step=0.1)
+    avoid = st.slider("Avoid Factor", 0.0, 10.0, value=1.0, step=0.1)
+    num_boids = st.slider("Number of Boids", 10, 500, value=100, step=5)
+    visual_range = st.slider("Visual Range", 10, 200, value=75, step=5)
+    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 100, value=10, step=1)
     draw_trail = st.checkbox("Draw Trail", value=False)
 
     st.button("Start", on_click=start, use_container_width=True)
@@ -63,6 +62,7 @@ params = {
     "avoidFactor": avoid,
     "numBoids": num_boids,
     "visualRange": visual_range,
+    "teleThrottle": tele_throttle,
     "drawTrail": draw_trail,
 }
 
