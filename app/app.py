@@ -195,7 +195,7 @@ DEFAULT_PARAMS = {
     "avoid": 50,
     "num_boids": 100,
     "visual_range": 75,
-    "tele_throttle": 10,
+    "tele_throttle": 2,
     "draw_trail": False,
 }
 
@@ -234,7 +234,7 @@ with st.sidebar:
     avoid = st.slider("Avoid Factor (*1000)", 1, 100, step=1, key="avoid")
     num_boids = st.slider("Number of Boids", 10, 5000, step=10, key="num_boids")
     visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
-    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 60, step=1, key="tele_throttle")
+    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 10, step=1, key="tele_throttle")
     draw_trail = st.checkbox("Draw Trail", key="draw_trail")
     st.button("Reset Parameters", on_click=reset_params, use_container_width=False, key="reset_params")
     st.button("Start", on_click=start, use_container_width=True, key="start")
