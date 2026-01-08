@@ -43,10 +43,25 @@ if "boids_command" not in st.session_state:
 
 with st.sidebar:
     # These slider values should match whatever units you want in JS.
-    attractive = st.slider("Attractive Factor", 0.0, 10.0, value=2.0, step=0.1)
-    alignment = st.slider("Alignment Factor", 0.0, 10.0, value=1.0, step=0.1)
-    avoid = st.slider("Avoid Factor", 0.0, 10.0, value=1.0, step=0.1)
-    num_boids = st.slider("Number of Boids", 10, 5000, value=100, step=50)
+
+    #     // strength of attractive force pulling boids toward nearby boids
+    # // (default value 0.005; typical values from 0 to 0.01)
+    # const attractiveFactor = 0.005;
+
+    # // strength of alignment force
+    # // (default value 0.05; typical values from 0 to 0.1)
+    # const alignmentFactor = 0.05;
+
+    # // strength of repulsive force pushing boids away from others who are too close
+    # // (default value 0.05; typical values from 0 to 0.1)
+    # const avoidFactor = 0.05;
+
+
+    st.caption("Factors are scaled by 1000 for convenient setting.")
+    attractive = st.slider("Attractive Factor (*1000)", 1, 20, value=5, step=1)
+    alignment = st.slider("Alignment Factor (*1000)", 1, 100, value=50, step=1)
+    avoid = st.slider("Avoid Factor (*1000)", 1, 100, value=50, step=1)
+    num_boids = st.slider("Number of Boids", 10, 5000, value=100, step=10)
     visual_range = st.slider("Visual Range", 10, 200, value=75, step=5)
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 60, value=10, step=1)
     draw_trail = st.checkbox("Draw Trail", value=False)
@@ -57,9 +72,9 @@ with st.sidebar:
 
 # always send params; command is one-shot
 params = {
-    "attractiveFactor": attractive,
-    "alignmentFactor": alignment,
-    "avoidFactor": avoid,
+    "attractiveFactor": attractive/1000,
+    "alignmentFactor": alignment/1000,
+    "avoidFactor": avoid/1000,
     "numBoids": num_boids,
     "visualRange": visual_range,
     "teleThrottle": tele_throttle,
