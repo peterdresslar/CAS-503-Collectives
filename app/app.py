@@ -41,7 +41,30 @@ st.title("Boids Simulator")
 if "boids_command" not in st.session_state:
     st.session_state["boids_command"] = None
 
+DEFAULT_PARAMS = {
+    "attractive": 5,
+    "alignment": 50,
+    "avoid": 50,
+    "num_boids": 100,
+    "visual_range": 75,
+    "tele_throttle": 10,
+    "draw_trail": False,
+}
+
+def init_params():
+    # When using widget keys, Streamlit expects Session State to be the
+    # single source of truth for the initial/default values.
+    for k, v in DEFAULT_PARAMS.items():
+        st.session_state.setdefault(k, v)
+
+def reset_params():
+    for k, v in DEFAULT_PARAMS.items():
+        st.session_state[k] = v
+
+init_params()
+
 with st.sidebar:
+    # (From the js file...)
     # These slider values should match whatever units you want in JS.
 
     #     // strength of attractive force pulling boids toward nearby boids
@@ -58,17 +81,17 @@ with st.sidebar:
 
 
     st.caption("Factors are scaled by 1000 for convenient setting.")
-    attractive = st.slider("Attractive Factor (*1000)", 1, 20, value=5, step=1)
-    alignment = st.slider("Alignment Factor (*1000)", 1, 100, value=50, step=1)
-    avoid = st.slider("Avoid Factor (*1000)", 1, 100, value=50, step=1)
-    num_boids = st.slider("Number of Boids", 10, 5000, value=100, step=10)
-    visual_range = st.slider("Visual Range", 10, 200, value=75, step=5)
-    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 60, value=10, step=1)
-    draw_trail = st.checkbox("Draw Trail", value=False)
-
-    st.button("Start", on_click=start, use_container_width=True)
-    st.button("Stop", on_click=stop, use_container_width=True)
-    st.button("Reload", on_click=reload, use_container_width=True)
+    attractive = st.slider("Attractive Factor (*1000)", 1, 20, step=1, key="attractive")
+    alignment = st.slider("Alignment Factor (*1000)", 1, 100, step=1, key="alignment")
+    avoid = st.slider("Avoid Factor (*1000)", 1, 100, step=1, key="avoid")
+    num_boids = st.slider("Number of Boids", 10, 5000, step=10, key="num_boids")
+    visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
+    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 60, step=1, key="tele_throttle")
+    draw_trail = st.checkbox("Draw Trail", key="draw_trail")
+    st.button("Reset Parameters", on_click=reset_params, use_container_width=False, key="reset_params")
+    st.button("Start", on_click=start, use_container_width=True, key="start")
+    st.button("Stop", on_click=stop, use_container_width=True, key="stop")
+    st.button("Reload", on_click=reload, use_container_width=True, key="reload")
 
 # always send params; command is one-shot
 params = {
@@ -110,3 +133,5 @@ with st.container(border=True):
         st.json(telemetry)
     else:
         st.info("No telemetry yet.")
+
+st.caption("This app uses boids.js code from Professor Bryan Daniels, Arizona State University.")
