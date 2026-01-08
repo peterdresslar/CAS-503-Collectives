@@ -5,10 +5,15 @@ import base64
 from typing import Any
 import html
 
+from sklearn.cluster import DBSCAN
+
 import numpy as np
 
 component_dir = pathlib.Path(__file__).parent / "canvas_component"
 _component_func = components.declare_component("my_canvas", path=str(component_dir))
+
+# For cluster analysis,min samples is arbitrarily set based on the model, thus a constant in this context
+MIN_SAMPLES = 3 # could defensibly choose 3 or 4 for 2D data, but i like 3 better. this is a fun thing to explore in the future though.
 
 st.set_page_config(page_title="Boids Simulator", page_icon="bird", layout="wide")
 
@@ -118,6 +123,29 @@ def decode_boids_telemetry(telemetry: dict[str, Any]) -> dict[str, Any]:
     positions_norm = positions_px / wh
     return {"format": fmt, "positions_px": positions_px, "positions_norm": positions_norm}
 
+def calculate_eps(n, _x, _y):
+    # we will be sending in normalized positions, so we need to use a relatively small eps to catch small clusters
+    # this was kind of a nightmare to troubleshoot, the absolute killer being that
+    # x and y are correct in the formula, but we are using *normalized* positions. x and y both equal 1!
+    # i have intentially masked the inputs for that reason.
+    x = 1
+    y = 1
+    eps = np.sqrt(x*y*MIN_SAMPLES / (np.pi*n)) # Diggle, 2013, complete spatial randomness. TODO this was a google-ai-search, should verify
+    return eps
+
+# cluster measurements using DBSCAN
+def analyze_clusters(positions, calculated_eps):
+    # we will be sending in normalized positions, so we need to use a relatively small eps to catch small clusters
+
+    db = DBSCAN(eps=calculated_eps, min_samples=MIN_SAMPLES, metric="euclidean").fit(
+        positions
+    )
+    labels = db.labels_
+
+    n_clusters = len(set(labels)) - (1 if -1 in labels else 0)
+    n_noise = list(labels).count(-1)
+
+    return n_clusters, n_noise
 
 # wrapper function to render the component
 def render_canvas(params=None, command=None, key=None, height=500):
@@ -136,7 +164,7 @@ def render_canvas(params=None, command=None, key=None, height=500):
 # on the next render (which is triggered by just about anything happening.)
 #
 # Since we have a custom streamlitcomponent we need to pass along the boids command state to run the javascript code from the HTML component shell.
-# 
+#
 # We also have our "button commands" which have been hardwired into the shell to signal the javascript as needed.
 # -------------------------
 
@@ -226,17 +254,19 @@ params = {
 
 command = st.session_state["boids_command"]
 
-# Here is the custom (Boids) component call. 
+# Here is the custom (Boids) component call.
 # Params are passed along as you might expect, along with a height param that I need to double-check
-# 
+#
 # The way that streamlit componenets work is that they automatically return a state object, into which we can write telemetry (see basically the rest of the app.)
 telemetry = render_canvas(params=params, command=command, key="boids", height=500)
 
 # consume the command so it doesn't repeat on next rerun. We don't want to call the main command over and over
 st.session_state["boids_command"] = None
 
+
 with st.container(border=True):
     if telemetry:
+        calculated_eps = calculate_eps(telemetry["n"], telemetry["w"], telemetry["h"])
         report_items: list[str] = []
         warning_text: str | None = None
 
@@ -272,12 +302,20 @@ with st.container(border=True):
             warning_text = f"Failed to decode telemetry positions: {e}"
 
         positions_px = st.session_state.get("boids_positions_px")
+        positions_norm = st.session_state.get("boids_positions_norm")
         if isinstance(positions_px, np.ndarray) and positions_px.size:
             com = positions_px.mean(axis=0)
             com_text = f"Center of mass (px): x={com[0]:.1f}, y={com[1]:.1f}"
             report_items.append(f"<span class='boids-report-item'>{html.escape(com_text)}</span>")
+        if isinstance(positions_norm, np.ndarray) and positions_norm.size:
+            n_clusters, n_noise = analyze_clusters(positions_norm, calculated_eps) # normalized positions
+            cluster_text = f"Clusters: {n_clusters}, Noise: {n_noise}"
+            report_items.append(f"<span class='boids-report-item'>Eps: {calculated_eps:.2f}</span>")
+            report_items.append(f"<span class='boids-report-item'>{html.escape(cluster_text)}</span>")
         else:
             report_items.append("<span class='boids-report-item'>Center of mass (px): n/a</span>")
+            report_items.append("<span class='boids-report-item'>Clusters: n/a</span>")
+            report_items.append("<span class='boids-report-item'>Noise: n/a</span>")
 
         # Compact “report box”: always shows derived stats; turns red and prepends warning when needed.
         warning_html = ""
