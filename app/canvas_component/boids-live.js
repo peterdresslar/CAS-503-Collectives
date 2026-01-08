@@ -9,6 +9,9 @@
     visualRange: 75,
     numBoids: 100,
     drawTrail: false,
+    // Telemetry rate back to Python (Streamlit component value). 0 disables telemetry.
+    // NOTE: this is a *rate* in Hz, not "every N frames".
+    teleThrottle: 0,
     minDistance: 20,
     speedLimit: 15,
     margin: 200,
@@ -24,18 +27,102 @@
   let running = false;
   let rafId = null;
 
-  // optional telemetry hook (call sparingly)
-  let sendTelemetry = null;
+  // optional telemetry hook (call sparingly): function(data) -> posts value to Streamlit
+  let postTelemetry = null;
+  let stepCount = 0;
+  let lastTelemetryMs = 0;
+  let telemetryHz = 0;
+  let simStartMs = 0;
 
   function setParams(next) {
     params = { ...params, ...next };
+    telemetryHz = Number(params.teleThrottle) || 0;
   }
 
-  function sizeCanvasToElement() {
-    // updated for streamlit iframe
-    width = canvas.width;
-    height = canvas.height;
+  // --TELEMETRY FUNCTIONS: ATTEMPTING TO DEAL WITH COMPRESSING HIGH VOLUME DATA INTO A PAYLOAD FOR STREAMLIT --//
+  function clamp01(x) {
+    return Math.max(0, Math.min(1, x));
   }
+
+  // Pack x/y positions into a compact base64 payload:
+  // - Interleaved [x0,y0,x1,y1,...] as uint16 quantized into [0..65535]
+  // - JSON carries: { format: "u16xy", data: "<base64>" }
+  function positionsToBase64U16XY() {
+    const n = boids.length;
+    const arr = new Uint16Array(n * 2);
+    const denomX = Math.max(1, width);
+    const denomY = Math.max(1, height);
+    for (let i = 0; i < n; i += 1) {
+      const b = boids[i];
+      const xq = Math.round(clamp01(b.x / denomX) * 65535);
+      const yq = Math.round(clamp01(b.y / denomY) * 65535);
+      arr[i * 2] = xq;
+      arr[i * 2 + 1] = yq;
+    }
+    const bytes = new Uint8Array(arr.buffer);
+
+    // Convert to base64 in chunks to avoid call-stack / argument limits.
+    let binary = "";
+    const CHUNK = 0x8000;
+    for (let i = 0; i < bytes.length; i += CHUNK) {
+      const sub = bytes.subarray(i, i + CHUNK);
+      binary += String.fromCharCode(...sub);
+    }
+    return btoa(binary);
+  }
+
+  function emitTelemetry({ includePositions }) {
+    if (!postTelemetry) return;
+    const nowMs = (typeof performance !== "undefined" && performance.now)
+      ? performance.now()
+      : Date.now();
+    const tMs = Math.floor(nowMs - simStartMs);
+
+    // Always send a minimal, JSON-friendly payload.
+    const payload = {
+      tMs,
+      stepCount,
+      n: boids.length,
+      w: width,
+      h: height,
+      format: includePositions ? "u16xy" : "meta",
+      params: {
+        attractiveFactor: params.attractiveFactor,
+        alignmentFactor: params.alignmentFactor,
+        avoidFactor: params.avoidFactor,
+        visualRange: params.visualRange,
+        numBoids: params.numBoids,
+        speedLimit: params.speedLimit,
+        minDistance: params.minDistance,
+        margin: params.margin,
+        turnFactor: params.turnFactor,
+        teleThrottle: params.teleThrottle,
+      },
+    };
+
+    if (includePositions) payload.data = positionsToBase64U16XY();
+
+    postTelemetry(payload);
+    return nowMs;
+  }
+
+  function maybeEmitTelemetry() {
+    // Works with the incoming teleThrottle rate parameter to control how often we send telemetry back to the Python shell
+    if (!postTelemetry) return;
+    if (telemetryHz <= 0) return;
+
+    const periodMs = 1000 / telemetryHz;
+    const nowMs = (typeof performance !== "undefined" && performance.now)
+      ? performance.now()
+      : Date.now();
+    if (nowMs - lastTelemetryMs < periodMs) return;
+
+    // Keep payload lean: no JS boid objects, no trail history.
+    const sentAtMs = emitTelemetry({ includePositions: true });
+    if (typeof sentAtMs === "number") lastTelemetryMs = sentAtMs;
+  }
+
+  // -- END TELEMETRY FUNCTIONS --//
 
   function initBoids() {
     boids = [];
@@ -146,6 +233,9 @@
       boid.history.push([boid.x, boid.y]);
       boid.history = boid.history.slice(-50);
     }
+    stepCount += 1;
+    // Fast-path: when telemetry is disabled (Hz <= 0), bypass all telemetry logic.
+    if (telemetryHz > 0 && postTelemetry) maybeEmitTelemetry();
   }
 
   function draw() {
@@ -173,8 +263,15 @@
   }
 
   function reload() {
+    // reset telemetry
+    stepCount = 0;
+    lastTelemetryMs = 0;
+    simStartMs = (typeof performance !== "undefined" && performance.now)
+      ? performance.now()
+      : Date.now();
+    boids = [];
     // reset state using current params
-    sizeCanvasToElement();
+    resize();
     initBoids();
   }
 
@@ -190,20 +287,26 @@
     width = canvas.width;
     height = canvas.height;
   }
-  
-  // OPTIONAL: keep this if you like the name, but make it correct:
-  function sizeCanvasToElement() {
-    resize();
-  }
 
   function init({ canvasId, sendTelemetry: sendFn }) {
     canvas = document.getElementById(canvasId);
     ctx = canvas.getContext("2d");
-    sendTelemetry = sendFn || null;
+    postTelemetry = typeof sendFn === "function" ? sendFn : null;
 
     resize();
     initBoids();
     draw(); // show initial state without running
+    stepCount = 0;
+    lastTelemetryMs = 0;
+    telemetryHz = Number(params.teleThrottle) || 0;
+    simStartMs = (typeof performance !== "undefined" && performance.now)
+      ? performance.now()
+      : Date.now();
+
+    // One-shot "hello" telemetry so the Streamlit UI isn't empty even when throttled off.
+    // Metadata-only to keep it cheap (no base64 positions).
+    const sentAtMs = emitTelemetry({ includePositions: false });
+    if (typeof sentAtMs === "number") lastTelemetryMs = sentAtMs;
   }
 
   window.BOIDS = { init, setParams, start, stop, reload, resize };

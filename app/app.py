@@ -46,7 +46,7 @@ with st.sidebar:
     attractive = st.slider("Attractive Factor", 0.0, 10.0, value=2.0, step=0.1)
     alignment = st.slider("Alignment Factor", 0.0, 10.0, value=1.0, step=0.1)
     avoid = st.slider("Avoid Factor", 0.0, 10.0, value=1.0, step=0.1)
-    num_boids = st.slider("Number of Boids", 10, 500, value=100, step=5)
+    num_boids = st.slider("Number of Boids", 10, 5000, value=100, step=50)
     visual_range = st.slider("Visual Range", 10, 200, value=75, step=5)
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 100, value=10, step=1)
     draw_trail = st.checkbox("Draw Trail", value=False)
@@ -73,8 +73,25 @@ telemetry = render_canvas(params=params, command=command, key="boids", height=50
 st.session_state["boids_command"] = None
 
 with st.container(border=True):
-    st.header("Telemetry (JS → Python)")
+    pass
     if telemetry:
+        # instantaneous SPS from deltas (persist previous values across reruns)
+        prev_step = st.session_state.get("prev_stepCount")
+        prev_tms = st.session_state.get("prev_tMs")
+
+        if prev_step is not None and prev_tms is not None:
+            d_step = telemetry["stepCount"] - prev_step
+            d_tms = telemetry["tMs"] - prev_tms
+            if d_tms > 0 and d_step >= 0:
+                sps_inst = d_step / d_tms * 1000.0
+                st.write(f"SPS (inst): {sps_inst:.1f}")
+            else:
+                st.write("SPS (inst): n/a")
+        else:
+            st.write("SPS (inst): n/a (warming up)")
+
+        st.session_state["prev_stepCount"] = telemetry["stepCount"]
+        st.session_state["prev_tMs"] = telemetry["tMs"]
         st.json(telemetry)
     else:
         st.info("No telemetry yet.")
