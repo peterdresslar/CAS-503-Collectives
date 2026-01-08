@@ -28,8 +28,17 @@
       window.parent.postMessage(outData, "*");
     }
     function init() { sendMessageToStreamlitClient("streamlit:componentReady", { apiVersion: 1 }); }
+    // Streamlit already sets iframe height from the Python `height=` argument.
+    // We keep a helper around in case you later make the height dynamic.
     function setFrameHeight(height) { sendMessageToStreamlitClient("streamlit:setFrameHeight", { height: height }); }
-    function sendDataToPython(data) { sendMessageToStreamlitClient("streamlit:setComponentValue", { value: data }); }
+    // Streamlit doesn't fully register the component until it sends the first
+    // `streamlit:render`. If we send a component value before that, Streamlit logs:
+    // "Received component message for unregistered ComponentInstance".
+    let hasSeenRender = false;
+    function sendDataToPython(data) {
+      if (!hasSeenRender) return;
+      sendMessageToStreamlitClient("streamlit:setComponentValue", { value: data });
+    }
 
     const FRAME_HEIGHT = 500;
 
@@ -48,10 +57,8 @@
     }
 
     window.addEventListener("load", function () {
-      init();
-
-      // Important: assert a non-zero iframe height up-front (avoids Chrome 0px feedback loop)
-      setFrameHeight(FRAME_HEIGHT);
+      // Delay slightly so Streamlit has time to register the component message handler.
+      setTimeout(init, 0);
 
       // Let layout settle, then size canvas + init sim
       requestAnimationFrame(() => {
@@ -63,7 +70,8 @@
     });
 
     window.addEventListener("resize", () => {
-      setFrameHeight(FRAME_HEIGHT);
+      // Only send frame-height messages after Streamlit has rendered at least once.
+      if (hasSeenRender) setFrameHeight(FRAME_HEIGHT);
       requestAnimationFrame(() => {
         resizeCanvasToCSSSize();
         if (window.BOIDS) window.BOIDS.resize();
@@ -72,6 +80,7 @@
 
     window.addEventListener("message", function (event) {
       if (event.data.type !== "streamlit:render") return;
+      hasSeenRender = true;
       const args = event.data.args || {};
       if (!window.BOIDS) return;
 
@@ -79,9 +88,6 @@
       if (args.command === "start") window.BOIDS.start();
       if (args.command === "stop") window.BOIDS.stop();
       if (args.command === "reload") window.BOIDS.reload();
-
-      // Keep height asserted after Streamlit renders
-      setFrameHeight(FRAME_HEIGHT);
     });
   </script>
 </body>
