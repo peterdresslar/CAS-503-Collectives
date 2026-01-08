@@ -45,14 +45,13 @@
     function resizeCanvasToCSSSize() {
       const canvas = document.getElementById("boids");
       const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+      const dpr = window.devicePixelRatio || 1; // dpr is fairly well supported but not universal: https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio
 
       // match drawing buffer to displayed size (important for crispness + correct sim bounds)
       canvas.width = Math.round(rect.width * dpr);
       canvas.height = Math.round(rect.height * dpr);
 
-      // if your boids code uses ctx pixels directly, you may also want:
-      const ctx = canvas.getContext("2d");
+      const ctx = canvas.getContext("2d"); // critical for correct simulation bounds available to boids-live.js
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
