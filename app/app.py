@@ -1,11 +1,69 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pathlib
+import base64
+from typing import Any
+
+import numpy as np
 
 component_dir = pathlib.Path(__file__).parent / "canvas_component"
 _component_func = components.declare_component("my_canvas", path=str(component_dir))
 
 st.set_page_config(page_title="Boids Simulator", page_icon="bird", layout="wide")
+
+# -------------------------
+# telemetry decoding helpers
+# -------------------------
+def _decode_u16xy_base64_to_positions_px(*, data_b64: str, w: int, h: int) -> np.ndarray:
+    """
+    Decode boid positions from JS telemetry format "u16xy".
+
+    JS side packs interleaved [x0,y0,x1,y1,...] into a Uint16Array,
+    quantized in [0..65535] relative to the canvas drawing buffer (w,h),
+    then base64 encodes the underlying bytes.
+    """
+    raw = base64.b64decode(data_b64)
+    u16 = np.frombuffer(raw, dtype="<u2")  # browsers are little-endian in practice
+    if u16.size % 2 != 0:
+        raise ValueError(f"u16xy payload must have even count, got {u16.size}")
+    xy_u16 = u16.reshape(-1, 2).astype(np.float32, copy=False)
+    denom_x = max(1, int(w))
+    denom_y = max(1, int(h))
+    xy_u16[:, 0] = (xy_u16[:, 0] / 65535.0) * denom_x
+    xy_u16[:, 1] = (xy_u16[:, 1] / 65535.0) * denom_y
+    return xy_u16
+
+
+def decode_boids_telemetry(telemetry: dict[str, Any]) -> dict[str, Any]:
+    """
+    Return a small, Python-friendly view of incoming telemetry.
+
+    Adds:
+      - positions_px: np.ndarray (n,2) float32 when format == "u16xy"
+      - positions_norm: np.ndarray (n,2) float32 in [0,1] (approx)
+    """
+    fmt = telemetry.get("format")
+    if fmt != "u16xy":
+        return {"format": fmt, "positions_px": None, "positions_norm": None}
+
+    data_b64 = telemetry.get("data")
+    if not isinstance(data_b64, str) or not data_b64:
+        return {"format": fmt, "positions_px": None, "positions_norm": None}
+
+    w = int(telemetry.get("w", 1))
+    h = int(telemetry.get("h", 1))
+    positions_px = _decode_u16xy_base64_to_positions_px(data_b64=data_b64, w=w, h=h)
+
+    # Safety: align with reported n if present (avoid downstream shape surprises).
+    n_reported = telemetry.get("n")
+    if isinstance(n_reported, int) and n_reported >= 0 and positions_px.shape[0] != n_reported:
+        n = min(positions_px.shape[0], n_reported)
+        positions_px = positions_px[:n]
+
+    wh = np.array([max(1, w), max(1, h)], dtype=np.float32)
+    positions_norm = positions_px / wh
+    return {"format": fmt, "positions_px": positions_px, "positions_norm": positions_norm}
+
 
 # wrapper function to render the component
 def render_canvas(params=None, command=None, key=None, height=500):
@@ -130,6 +188,23 @@ with st.container(border=True):
 
         st.session_state["prev_stepCount"] = telemetry["stepCount"]
         st.session_state["prev_tMs"] = telemetry["tMs"]
+
+        # Decode high-volume telemetry (positions) into NumPy arrays for downstream use.
+        try:
+            decoded = decode_boids_telemetry(telemetry)
+            st.session_state["boids_positions_px"] = decoded["positions_px"]
+            st.session_state["boids_positions_norm"] = decoded["positions_norm"]
+        except Exception as e:
+            st.session_state["boids_positions_px"] = None
+            st.session_state["boids_positions_norm"] = None
+            st.warning(f"Failed to decode telemetry positions: {e}")
+
+        # Example: quick sanity check you can build on (center of mass in pixels).
+        positions_px = st.session_state.get("boids_positions_px")
+        if isinstance(positions_px, np.ndarray) and positions_px.size:
+            com = positions_px.mean(axis=0)
+            st.write(f"Center of mass (px): x={com[0]:.1f}, y={com[1]:.1f}")
+
         st.json(telemetry)
     else:
         st.info("No telemetry yet.")
