@@ -48,7 +48,7 @@ with st.sidebar:
     avoid = st.slider("Avoid Factor", 0.0, 10.0, value=1.0, step=0.1)
     num_boids = st.slider("Number of Boids", 10, 5000, value=100, step=50)
     visual_range = st.slider("Visual Range", 10, 200, value=75, step=5)
-    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 100, value=10, step=1)
+    tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 60, value=10, step=1)
     draw_trail = st.checkbox("Draw Trail", value=False)
 
     st.button("Start", on_click=start, use_container_width=True)
