@@ -229,9 +229,9 @@ with st.sidebar:
 
 
     st.caption("Factors are scaled by 1000 for convenient setting.")
-    attractive = st.slider("Attractive Factor (*1000)", 1, 20, step=1, key="attractive")
-    alignment = st.slider("Alignment Factor (*1000)", 1, 100, step=1, key="alignment")
-    avoid = st.slider("Avoid Factor (*1000)", 1, 100, step=1, key="avoid")
+    attractive = st.slider("Attractive Factor (*1000)", 1, 1000, step=1, key="attractive")
+    alignment = st.slider("Alignment Factor (*1000)", 1, 1000, step=10, key="alignment")
+    avoid = st.slider("Avoid Factor (*1000)", 1, 1000, step=10, key="avoid")
     num_boids = st.slider("Number of Boids", 10, 5000, step=10, key="num_boids")
     visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 10, step=1, key="tele_throttle")
