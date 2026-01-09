@@ -338,4 +338,4 @@ with st.container(border=True):
     else:
         st.info("No telemetry yet.")
 
-st.caption("This app uses boids.js code from Professor Bryan Daniels, Arizona State University.")
+st.caption("This app uses boids.js code from Ben Eater, as adapted/shared byProfessor Bryan Daniels, Arizona State University.")
