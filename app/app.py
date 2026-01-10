@@ -15,7 +15,12 @@ _component_func = components.declare_component("my_canvas", path=str(component_d
 # For cluster analysis,min samples is arbitrarily set based on the model, thus a constant in this context
 MIN_SAMPLES = 3 # could defensibly choose 3 or 4 for 2D data, but i like 3 better. this is a fun thing to explore in the future though.
 
-st.set_page_config(page_title="Boids Simulator", page_icon="bird", layout="wide")
+st.set_page_config(page_title="Boids Simulator", page_icon="🐦", layout="wide")
+
+# nav
+st.page_link("app.py", label="Simulation", icon="🐦")
+st.page_link("sweeps.py", label="Sweeps", icon="📊")
+st.divider()
 
 # Small UI helper styling (keeps “report/warning” content compact and horizontal).
 st.markdown(

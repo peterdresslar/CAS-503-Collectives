@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="boids-headless.js"></script>
+</head>
+<body>
+<script>
+  // Streamlit component API
+  function sendToStreamlit(value) {
+    window.parent.postMessage({
+      type: "streamlit:setComponentValue",
+      value: value
+    }, "*");
+  }
+
+  function setFrameHeight(height) {
+    window.parent.postMessage({
+      type: "streamlit:setFrameHeight",
+      height: height
+    }, "*");
+  }
+
+  // Receive render events from Streamlit
+  window.addEventListener("message", (event) => {
+    if (event.data.type !== "streamlit:render") return;
+    
+    const config = event.data.args.config;
+    if (!config) return;
+
+    // Run the simulation
+    const result = run(config);
+    
+    // Send back to Python
+    sendToStreamlit(result);
+  });
+
+  // Signal ready
+  setFrameHeight(0);  // invisible component
+  window.parent.postMessage({ type: "streamlit:componentReady" }, "*");
+</script>
+</body>
+</html>
