@@ -71,12 +71,34 @@
     return btoa(binary);
   }
 
+  function calculateMeanVelocity() {
+    const n = boids.length;
+    let sumDX = 0;
+    let sumDY = 0;
+    for (let i = 0; i < n; i += 1) {
+      const b = boids[i];
+      sumDX += b.dx;
+      sumDY += b.dy;
+    }
+
+    // return as an absolute velocity and a vector
+    const velocity = Math.sqrt(sumDX * sumDX + sumDY * sumDY);
+    const vector = {  // normalized vector
+      dx: sumDX / n,
+      dy: sumDY / n,
+    };
+    return { velocity, vector };
+  }
+
   function emitTelemetry({ includePositions }) {
     if (!postTelemetry) return;
     const nowMs = (typeof performance !== "undefined" && performance.now)
       ? performance.now()
       : Date.now();
     const tMs = Math.floor(nowMs - simStartMs);
+
+    // calculate mean velocity
+    const velocityVector = calculateMeanVelocity();
 
     // Always send a minimal, JSON-friendly payload.
     const payload = {
@@ -98,6 +120,8 @@
         turnFactor: params.turnFactor,
         teleThrottle: params.teleThrottle,
       },
+      velocity: velocityVector.velocity,
+      vector: velocityVector.vector
     };
 
     if (includePositions) payload.data = positionsToBase64U16XY();

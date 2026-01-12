@@ -71,7 +71,6 @@ def _decode_u16xy_base64_to_positions_px(*, data_b64: str, w: int, h: int) -> np
     xy_u16[:, 1] = (xy_u16[:, 1] / 65535.0) * denom_y
     return xy_u16
 
-
 def decode_boids_telemetry(telemetry: dict[str, Any]) -> dict[str, Any]:
     """
     Return a small, Python-friendly view of incoming telemetry.
@@ -263,6 +262,8 @@ st.session_state["boids_command"] = None
 with st.container(border=True):
     if telemetry:
         calculated_eps = calculate_eps(telemetry["n"], telemetry["w"], telemetry["h"])
+        degrees_vector = np.degrees(np.arctan2(telemetry["vector"]["dy"], telemetry["vector"]["dx"]))
+        degrees_vector_text = f"Mean Vector (inst): {degrees_vector:.1f} degrees"
         report_items: list[str] = []
         warning_text: str | None = None
 
@@ -274,9 +275,15 @@ with st.container(border=True):
         if prev_step is not None and prev_tms is not None:
             d_step = telemetry["stepCount"] - prev_step
             d_tms = telemetry["tMs"] - prev_tms
+            velocity = telemetry["velocity"]
+            vector = telemetry["vector"]
+            velocity_text = f"Mean Velocity (inst): {velocity:.1f}"
+            report_items.append(f"<span class='boids-report-item'>{html.escape(velocity_text)}</span>")
+            report_items.append(f"<span class='boids-report-item'>{html.escape(degrees_vector_text)}</span>")
             if d_tms > 0 and d_step >= 0:
                 sps_inst = d_step / d_tms * 1000.0
                 sps_text = f"SPS (inst): {sps_inst:.1f}"
+   
             else:
                 sps_text = "SPS (inst): n/a"
 
