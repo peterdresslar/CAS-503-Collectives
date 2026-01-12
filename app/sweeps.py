@@ -193,26 +193,8 @@ with st.container(border=True):
     st.write("Sweep has completed. Results are shown below.")
 
 
-st.write("Each of the sections below describes one sweep. Pressing the button will run the simulation as described in the section and return some results and plots.")
 
-st.markdown("""
-Because of the fact that, along with the three main "factors," we have a number of ancillary parameters, here we need to lay down
-a few constraints:
-- While we can see in the interactive Boids simulation that `visualRange` has a strong effect especially on cluster size, for now we will leave it pegged at 75.
-- We will run each sweep with two initial quantities of boids: 100 and 1000. In other words, each sweep listed below will actually be split into two sweeps. I do not actually expect
-that the differences at different quantities will be *so* material as to make additional quantity tiers interesting, but we shall see.
-- We will run each sweep by [I don't know how many steps], determined for now by me looking at some plots and making an arbitary call.
-- Finally, and most challenging, we will run every sweep using the same height and width parameters as supplied by Prof. Daniels. I observe that
-when resizing the canvas in the interactive sim, behavior of the flocks is significantly altered particularly under different aspect ratios. However, the study of that phenomenon
-seems beyond the scope of this homework. 
 
-We will start with OFAT (One Factor At A Time) runs. Then we will do pairwise interaction sweeps.
-Finally, we will have our three-way interaction "battle royale." (Absolutely a scientific term.)
-""")
-
-# -------------------------
-# Sweep container
-# -------------------------
 
 # -------------------------
 # Sweep configurator and controls.
@@ -236,12 +218,41 @@ with st.container(border=True):
 # Sweep component
 # -------------------------
 if st.session_state.sweep_state == "running":
+  # report to sweep state container
+  with st.container(border=True):
+    st.write(f"Sweep initialized. Experiment type: {exp_type}. Parameters: ")
+    st.table(st.session_state.get("sweep_configs", []))
+    st.write("Running {len(configs)} simulations...")
+
+  # actually run the sweep
+
+
     configs = st.session_state.get("sweep_configs", [])
     if configs:
-        with st.spinner(f"Running {len(configs)} simulations..."):
-            results = render_sweep_component(configs=configs, key="sweep_batch")
-        
+      with st.spinner(f"Running {len(configs)} simulations..."):
+        results = render_sweep_component(configs=configs, key="sweep_batch")
+      
         if results is not None:
             st.session_state["sweep_results"] = results
+            st.json(results, expanded=False)  # TODO replace with a downloader
             st.session_state.sweep_state = "completed"
-            st.rerun()  # refresh to show completed state
+
+# -------------------------
+# Sweep discussion
+# -------------------------
+
+st.write("Discussion")
+st.markdown("""
+Because of the fact that, along with the three main "factors," we have a number of ancillary parameters, here we need to lay down
+a few constraints:
+- While we can see in the interactive Boids simulation that `visualRange` has a strong effect especially on cluster size, for now we will leave it pegged at 75.
+- We will run each sweep with two initial quantities of boids: 100 and 1000. In other words, each sweep listed below will actually be split into two sweeps. I do not actually expect
+that the differences at different quantities will be *so* material as to make additional quantity tiers interesting, but we shall see.
+- We will run each sweep by [I don't know how many steps], determined for now by me looking at some plots and making an arbitary call.
+- Finally, and most challenging, we will run every sweep using the same height and width parameters as supplied by Prof. Daniels. I observe that
+when resizing the canvas in the interactive sim, behavior of the flocks is significantly altered particularly under different aspect ratios. However, the study of that phenomenon
+seems beyond the scope of this homework. 
+
+We will start with OFAT (One Factor At A Time) runs. Then we will do pairwise interaction sweeps.
+Finally, we will have our three-way interaction "battle royale." (Absolutely a scientific term.)
+""")
