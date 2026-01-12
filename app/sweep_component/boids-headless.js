@@ -185,12 +185,17 @@ function animationLoop() {
 }
 
 function run(simConfig) {
+  console.log("Running simulation with config:", simConfig);
+  
+  // reset frames!
+  frames = [];
+
+  // unpack the config
   attractiveFactor = simConfig.attractiveFactor;
   alignmentFactor = simConfig.alignmentFactor;
   avoidFactor = simConfig.avoidFactor;
   visualRange = simConfig.visualRange;
   numBoids = simConfig.numBoids;
-  drawTrail = simConfig.drawTrail;
   width = simConfig.width;
   height = simConfig.height;
   const steps = simConfig.steps;

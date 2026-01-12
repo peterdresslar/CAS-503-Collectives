@@ -17,11 +17,6 @@ MIN_SAMPLES = 3 # could defensibly choose 3 or 4 for 2D data, but i like 3 bette
 
 st.set_page_config(page_title="Boids Simulator", page_icon="🐦", layout="wide")
 
-# nav
-st.page_link("app.py", label="Simulation", icon="🐦")
-st.page_link("sweeps.py", label="Sweeps", icon="📊")
-st.divider()
-
 # Small UI helper styling (keeps “report/warning” content compact and horizontal).
 st.markdown(
     """
@@ -210,10 +205,6 @@ def init_params():
     for k, v in DEFAULT_PARAMS.items():
         st.session_state.setdefault(k, v)
 
-def reset_params():
-    for k, v in DEFAULT_PARAMS.items():
-        st.session_state[k] = v
-
 init_params()
 
 with st.sidebar:
@@ -241,7 +232,7 @@ with st.sidebar:
     visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 10, step=1, key="tele_throttle")
     draw_trail = st.checkbox("Draw Trail", key="draw_trail")
-    st.button("Reset Parameters", on_click=reset_params, use_container_width=False, key="reset_params")
+    st.button("Reset Parameters", on_click=init_params, use_container_width=False, key="reset_params")
     st.button("Start", on_click=start, use_container_width=True, key="start")
     st.button("Stop", on_click=stop, use_container_width=True, key="stop")
     st.button("Reload", on_click=reload, use_container_width=True, key="reload")
