@@ -245,8 +245,8 @@ with st.sidebar:
 
     st.caption("Factors are scaled for convenient setting.")
     attractive = st.slider("Attractive Factor (*1000)", 0, 100, step=1, key="attractive")
-    alignment = st.slider("Alignment Factor (*100)", 0, 100, step=10, key="alignment")
-    avoid = st.slider("Avoid Factor (*100)", 0, 100, step=10, key="avoid")
+    alignment = st.slider("Alignment Factor (*100)", 0, 100, step=1, key="alignment")
+    avoid = st.slider("Avoid Factor (*100)", 0, 100, step=1, key="avoid")
     num_boids = st.slider("Number of Boids", 1, 5000, step=50, key="num_boids")
     visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 10, step=1, key="tele_throttle")
@@ -298,7 +298,7 @@ with st.container(border=True):
 
         if prev_step is not None and prev_tms is not None:
             phase = getShoalPhase(telemetry)
-            # phase text: green if polar, blue if milling, yellow if swarm
+            # phase text: green if polar, blue if milling, yellow if swarm. i am pretty stoked about this.
             phase_color = "green" if phase == "polar" else "blue" if phase == "milling" else "yellow"
             phase_text = f"<span style='color: {phase_color};'>{html.escape(phase.capitalize())}</span>"
             report_items.append(f"<span class='boids-report-item'>{phase_text}</span>")
@@ -374,4 +374,6 @@ with st.container(border=True):
 
 st.caption("This app uses boids.js code from Ben Eater, as adapted/shared by Professor Bryan Daniels, Arizona State University.")
 st.caption("Shoaling characteristics were adapted from \"Collective States, Multistability and Transitional Behavior in Schooling Fish\", Tunstrøm et al., 2013, PLOS Computational Biology.")
-st.caption("Version v0.1.0. Peter Dresslar.")
+st.caption("Version v0.1.1. Peter Dresslar.")
+st.caption("Version v0.1.1 changes only the controls, making two sliders more fine-grained.")
+st.caption("Version v0.1.0 was the first version I bothered to number.")
