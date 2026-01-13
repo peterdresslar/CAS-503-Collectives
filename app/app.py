@@ -374,3 +374,4 @@ with st.container(border=True):
 
 st.caption("This app uses boids.js code from Ben Eater, as adapted/shared by Professor Bryan Daniels, Arizona State University.")
 st.caption("Shoaling characteristics were adapted from \"Collective States, Multistability and Transitional Behavior in Schooling Fish\", Tunstrøm et al., 2013, PLOS Computational Biology.")
+st.caption("Version v0.1.0. Peter Dresslar.")
