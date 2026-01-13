@@ -146,6 +146,21 @@ def analyze_clusters(positions, calculated_eps):
 
     return n_clusters, n_noise
 
+
+def getShoalPhase(telemetry):
+    # We thus define that the school is in: 
+    # the polar state (P) when Op>0.65 and Or<0.35; 
+    # the milling state (M) when Op<0.35 and Or>0.65...
+    # otherwise the school is in the swarm state (S)
+    Op = telemetry["polarization"]
+    Or = telemetry["rotationOrder"]
+    if Op > 0.65 and Or < 0.35:
+        return "polar"
+    elif Op < 0.35 and Or > 0.65:
+        return "milling"
+    else:
+        return "swarm"
+
 # wrapper function to render the component
 def render_canvas(params=None, command=None, key=None, height=500):
     return _component_func(
@@ -182,7 +197,7 @@ def reload():
 # -------------------------
 # Streamlit app
 # -------------------------
-st.title("Boids Simulator")
+st.markdown("**Boids Simulator**")
 
 # init command state
 if "boids_command" not in st.session_state:
@@ -192,7 +207,7 @@ DEFAULT_PARAMS = {
     "attractive": 5,
     "alignment": 50,
     "avoid": 50,
-    "num_boids": 100,
+    "num_boids": 500,
     "visual_range": 75,
     "tele_throttle": 2,
     "draw_trail": False,
@@ -263,7 +278,11 @@ with st.container(border=True):
     if telemetry:
         calculated_eps = calculate_eps(telemetry["n"], telemetry["w"], telemetry["h"])
         degrees_vector = np.degrees(np.arctan2(telemetry["vector"]["dy"], telemetry["vector"]["dx"]))
-        degrees_vector_text = f"Mean Vector (inst): {degrees_vector:.1f} degrees"
+        degrees_vector_text = f"Mean Vector: {degrees_vector:.1f} degrees"
+        polarization = telemetry["polarization"]
+        polarization_text = f"Polarization (normalized): {polarization:.2f}"
+        rotationOrder = telemetry["rotationOrder"]
+        rotationOrder_text = f"Rotation (normalized): {rotationOrder:.2f}"
         report_items: list[str] = []
         warning_text: str | None = None
 
@@ -273,6 +292,11 @@ with st.container(border=True):
         sps_text = "SPS (inst): n/a (warming up)"
 
         if prev_step is not None and prev_tms is not None:
+            phase = getShoalPhase(telemetry)
+            # phase text: green if polar, blue if milling, yellow if swarm
+            phase_color = "green" if phase == "polar" else "blue" if phase == "milling" else "yellow"
+            phase_text = f"<span style='color: {phase_color};'>{html.escape(phase.capitalize())}</span>"
+            report_items.append(f"<span class='boids-report-item'>{phase_text}</span>")
             d_step = telemetry["stepCount"] - prev_step
             d_tms = telemetry["tMs"] - prev_tms
             velocity = telemetry["velocity"]
@@ -280,6 +304,8 @@ with st.container(border=True):
             velocity_text = f"Mean Velocity (inst): {velocity:.1f}"
             report_items.append(f"<span class='boids-report-item'>{html.escape(velocity_text)}</span>")
             report_items.append(f"<span class='boids-report-item'>{html.escape(degrees_vector_text)}</span>")
+            report_items.append(f"<span class='boids-report-item'>{html.escape(polarization_text)}</span>")
+            report_items.append(f"<span class='boids-report-item'>{html.escape(rotationOrder_text)}</span>")
             if d_tms > 0 and d_step >= 0:
                 sps_inst = d_step / d_tms * 1000.0
                 sps_text = f"SPS (inst): {sps_inst:.1f}"
@@ -312,13 +338,13 @@ with st.container(border=True):
             report_items.append(f"<span class='boids-report-item'>{html.escape(com_text)}</span>")
         if isinstance(positions_norm, np.ndarray) and positions_norm.size:
             n_clusters, n_noise = analyze_clusters(positions_norm, calculated_eps) # normalized positions
-            cluster_text = f"Clusters: {n_clusters}, Noise: {n_noise}"
-            report_items.append(f"<span class='boids-report-item'>Eps: {calculated_eps:.2f}</span>")
+            cluster_text = f"Clusters: {n_clusters}, Noise: {n_noise} Eps: {calculated_eps:.2f}"
             report_items.append(f"<span class='boids-report-item'>{html.escape(cluster_text)}</span>")
         else:
             report_items.append("<span class='boids-report-item'>Center of mass (px): n/a</span>")
             report_items.append("<span class='boids-report-item'>Clusters: n/a</span>")
             report_items.append("<span class='boids-report-item'>Noise: n/a</span>")
+            report_items.append("<span class='boids-report-item'>Eps: n/a</span>")
 
         # Compact “report box”: always shows derived stats; turns red and prepends warning when needed.
         warning_html = ""
@@ -342,3 +368,4 @@ with st.container(border=True):
         st.info("No telemetry yet.")
 
 st.caption("This app uses boids.js code from Ben Eater, as adapted/shared by Professor Bryan Daniels, Arizona State University.")
+st.caption("Shoaling characteristics were adapted from \"Collective States, Multistability and Transitional Behavior in Schooling Fish\", Tunstrøm et al., 2013, PLOS Computational Biology.")

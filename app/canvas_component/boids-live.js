@@ -90,6 +90,93 @@
     return { velocity, vector };
   }
 
+  function calculatePolarization() {
+    // from Tunstrøm et al. 2013:
+    // First, the polarization order parameter Op, which provides a measure of how aligned the individuals in a group are. It is defined as the absolute value of the mean individual heading,
+    // O_sub_p = 1/N * abs(sum(u_i) where u_i is the unit direction of the individual's heading)
+    // note: not a vector! just a scalar
+
+    let sumU_x = 0;
+    let sumU_y = 0;
+    for (let boid of boids) {
+      const speed = Math.sqrt(boid.dx * boid.dx + boid.dy * boid.dy);
+      if (speed > 0) {
+        const unitDirection = {
+          dx: boid.dx / speed,
+          dy: boid.dy / speed,
+        };
+        sumU_x += unitDirection.dx;
+        sumU_y += unitDirection.dy;
+      } else {
+        // if the boid is not moving, we add nothing
+        continue;
+      }
+    }
+
+    const n = boids.length;
+    const O_p = Math.sqrt(sumU_x * sumU_x + sumU_y * sumU_y) / n;
+    return O_p;
+  }
+
+  function calculateCenterOfMass() {
+    let centerX = 0;
+    let centerY = 0;
+    for (let boid of boids) {
+      centerX += boid.x;
+      centerY += boid.y;
+    }
+    const n = boids.length;
+    centerX /= n;
+    centerY /= n;
+    return { centerX, centerY };
+  }
+
+  function calculateRotationOrder() {
+    // from Tunstrøm et al. 2013:
+    // The rotation order parameter Or is then defined by the mean (normalized) angular momentum
+    // which, by construction also takes values between 0 (no rotation) and 1 (strong rotation).
+    // (angular momentum)
+    // Or = 1/N * abs(sum(u_i x r_i)
+    // this one is a little questionable, since we don't always have shoals, but let's try
+
+    const {centerX, centerY} = calculateCenterOfMass();
+    const n = boids.length;
+    let O_r = 0;
+    let sum_u_r = 0;
+    for (let boid of boids) { 
+      const speed = Math.sqrt(boid.dx * boid.dx + boid.dy * boid.dy);
+        if (speed > 0) {
+          const unitDirection = {
+            dx: boid.dx / speed,
+            dy: boid.dy / speed,
+          };
+          this_u_x = unitDirection.dx;
+          this_u_y = unitDirection.dy;
+          this_r_x = boid.x - centerX;
+          this_r_y = boid.y - centerY;
+          //normalize r
+          const r_len = Math.sqrt(this_r_x * this_r_x + this_r_y * this_r_y);
+          if (r_len > 0) {
+            this_r_x /= r_len;
+            this_r_y /= r_len;
+            this_u_x_r_x = this_u_x * this_r_x;
+            this_u_y_r_y = this_u_y * this_r_y;
+            this_u_r = this_u_x * this_r_x - this_r_y * this_u_y;
+            sum_u_r += this_u_r; 
+          } else { // r_len is 0, so we add nothing
+            continue;
+          }
+        } else {
+          // if the boid is not moving, we add nothing
+          continue;
+        }
+      }
+    O_r = Math.abs(sum_u_r) / n;
+    return O_r;
+
+  }
+
+
   function emitTelemetry({ includePositions }) {
     if (!postTelemetry) return;
     const nowMs = (typeof performance !== "undefined" && performance.now)
@@ -99,6 +186,8 @@
 
     // calculate mean velocity
     const velocityVector = calculateMeanVelocity();
+    const polarization = calculatePolarization();
+    const rotationOrder = calculateRotationOrder();
 
     // Always send a minimal, JSON-friendly payload.
     const payload = {
@@ -121,7 +210,9 @@
         teleThrottle: params.teleThrottle,
       },
       velocity: velocityVector.velocity,
-      vector: velocityVector.vector
+      vector: velocityVector.vector,
+      polarization: polarization,
+      rotationOrder: rotationOrder
     };
 
     if (includePositions) payload.data = positionsToBase64U16XY();
@@ -233,7 +324,7 @@
     ctx.lineTo(boid.x - 15, boid.y - 5);
     ctx.lineTo(boid.x, boid.y);
     ctx.fill();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // TODO verify
 
     if (params.drawTrail && boid.history.length) {
       ctx.strokeStyle = "#558cf466";
