@@ -7,7 +7,7 @@
     alignmentFactor: 0.05,
     avoidFactor: 0.05,
     visualRange: 75,
-    numBoids: 100,
+    numBoids: 500,
     drawTrail: false,
     // Telemetry rate back to Python (Streamlit component value). 0 disables telemetry.
     // NOTE: this is a *rate* in Hz, not "every N frames".

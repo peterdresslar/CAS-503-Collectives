@@ -1,3 +1,4 @@
+from pandas._config.config import reset_option
 import streamlit as st
 import streamlit.components.v1 as components
 import pathlib
@@ -161,6 +162,11 @@ def getShoalPhase(telemetry):
     else:
         return "swarm"
 
+
+def reset_params():
+    for k, v in DEFAULT_PARAMS.items():
+        st.session_state[k] = v # force
+
 # wrapper function to render the component
 def render_canvas(params=None, command=None, key=None, height=500):
     return _component_func(
@@ -246,7 +252,7 @@ with st.sidebar:
     visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 10, step=1, key="tele_throttle")
     draw_trail = st.checkbox("Draw Trail", key="draw_trail")
-    st.button("Reset Parameters", on_click=init_params, use_container_width=False, key="reset_params")
+    st.button("Reset Parameters", on_click=reset_params, use_container_width=False, key="reset_params")
     st.button("Start", on_click=start, use_container_width=True, key="start")
     st.button("Stop", on_click=stop, use_container_width=True, key="stop")
     st.button("Reload", on_click=reload, use_container_width=True, key="reload")
