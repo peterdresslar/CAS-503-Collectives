@@ -210,8 +210,8 @@ if "boids_command" not in st.session_state:
 
 DEFAULT_PARAMS = {
     "attractive": 5,
-    "alignment": 50,
-    "avoid": 50,
+    "alignment": 5,
+    "avoid": 5,
     "num_boids": 500,
     "visual_range": 75,
     "tele_throttle": 2,
@@ -243,11 +243,11 @@ with st.sidebar:
     # const avoidFactor = 0.05;
 
 
-    st.caption("Factors are scaled by 1000 for convenient setting.")
-    attractive = st.slider("Attractive Factor (*1000)", 1, 1000, step=1, key="attractive")
-    alignment = st.slider("Alignment Factor (*1000)", 1, 1000, step=10, key="alignment")
-    avoid = st.slider("Avoid Factor (*1000)", 1, 1000, step=10, key="avoid")
-    num_boids = st.slider("Number of Boids", 10, 5000, step=10, key="num_boids")
+    st.caption("Factors are scaled for convenient setting.")
+    attractive = st.slider("Attractive Factor (*1000)", 0, 100, step=1, key="attractive")
+    alignment = st.slider("Alignment Factor (*100)", 0, 100, step=10, key="alignment")
+    avoid = st.slider("Avoid Factor (*100)", 0, 100, step=10, key="avoid")
+    num_boids = st.slider("Number of Boids", 1, 5000, step=50, key="num_boids")
     visual_range = st.slider("Visual Range", 10, 200, step=5, key="visual_range")
     tele_throttle = st.slider("Telemetry Throttle (Hz)", 0, 10, step=1, key="tele_throttle")
     draw_trail = st.checkbox("Draw Trail", key="draw_trail")
@@ -259,8 +259,8 @@ with st.sidebar:
 params = {
     # Don't forget to scale the Factors!
     "attractiveFactor": attractive/1000,
-    "alignmentFactor": alignment/1000,
-    "avoidFactor": avoid/1000,
+    "alignmentFactor": alignment/100,  # so nasty, this could be handled way better
+    "avoidFactor": avoid/100,
     "numBoids": num_boids,
     "visualRange": visual_range,
     "teleThrottle": tele_throttle,
